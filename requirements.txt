@@ -1,0 +1,10 @@
+# Full planned Python stack. The local frontend uses requirements-web.txt.
+-r requirements-web.txt
+PyWavelets==1.10.0
+reedsolo==1.7.0
+scikit-image==0.26.0
+invisible-watermark==0.2.0
+SQLModel==0.0.48
+pydantic-settings==2.16.0
+cosmpy==0.12.2
+streamlit==1.66.0

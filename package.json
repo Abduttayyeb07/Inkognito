@@ -1,0 +1,25 @@
+{
+  "name": "documark",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/compile-contract.mjs && node scripts/dev.mjs",
+    "build": "node scripts/compile-contract.mjs && vite build",
+    "preview": "vite preview",
+    "contract:compile": "node scripts/compile-contract.mjs",
+    "contract:test": "node scripts/compile-contract.mjs && node --test contracts/test/*.test.mjs"
+  },
+  "devDependencies": {
+    "hardhat": "^3.20.0",
+    "solc": "0.8.37",
+    "vite": "8.3.4"
+  },
+  "dependencies": {
+    "ethers": "^6.17.0"
+  },
+  "overrides": {
+    "tmp": "0.2.7"
+  }
+}

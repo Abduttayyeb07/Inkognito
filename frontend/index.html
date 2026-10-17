@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="DocuMark scans documents and adds visible watermarks to PDFs and images, with no account required.">
+  <title>DocuMark — Scan and watermark documents</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#watermark" aria-label="DocuMark home"><span class="brand-icon" aria-hidden="true"><span></span><span></span><span></span></span><span>Docu<span class="brand-accent">Mark</span></span></a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="#watermark">Add watermark</a><a href="#scan">Scan document</a><a href="#inspect">Inspect file</a><a href="#chain">Sepolia proof</a><a href="#extract">Find owner</a>
+      </nav>
+      <span class="header-note">No signup · PDF & images</span>
+    </div>
+  </header>
+
+  <main>
+    <section id="workspace-view" class="workspace-view">
+      <div class="workspace-heading"><div><span class="tool-kicker" id="workspace-kicker">DOCUMENT WATERMARK</span><h1 id="workspace-title">Add watermark</h1><p id="workspace-description">Add a visible mark to every page of a PDF or image. Adjust it, then download your file.</p></div><div class="workspace-symbol" id="workspace-symbol"></div></div><div id="workspace-guide" class="workspace-guide" aria-live="polite">Choose a file to begin.</div>
+      <div class="workspace-grid"><div class="upload-column"><div id="camera-entry" class="camera-entry" hidden><button type="button" id="camera-button" class="camera-entry-button">Take page photo with phone camera <span aria-hidden="true">↗</span></button><p>On your phone, this opens the rear camera. Take one page at a time; photos collect below.</p></div><div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="Choose files or drop them here"><div class="upload-art"><div class="paper paper-back"></div><div class="paper paper-front"><span></span><span></span><span></span></div><div class="upload-plus">+</div></div><h2>Drop your file here</h2><p>or click to browse from your device</p><span id="choose-label" class="select-button">Select a file <span aria-hidden="true">→</span></span><small id="upload-hint">PDF, PNG or JPG • up to 20 MB • 20 pages</small></div><input id="file-input" type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" hidden><input id="camera-input" type="file" accept="image/jpeg,image/png" capture="environment" hidden><div id="file-list" class="file-list" aria-live="polite"></div></div>
+        <aside class="options-panel"><div class="panel-heading"><span class="panel-number">01</span><div><h2 id="panel-title">Customize watermark</h2><p id="panel-description">Choose how your watermark appears.</p></div></div><div id="tool-options" class="tool-options"></div><div id="file-summary" class="file-summary" hidden></div><button type="button" id="process-button" class="process-button" disabled>Choose a file to continue <span aria-hidden="true">→</span></button><div id="status" class="status" role="status" aria-live="polite"></div></aside>
+      </div>
+      <section id="result-panel" class="result-panel" hidden><div class="result-check">✓</div><div class="result-copy"><h2 id="result-title">Your file is ready</h2><p id="result-description">Download your processed document.</p></div><a id="download-link" class="download-button" href="#" download>Download file <span aria-hidden="true">↓</span></a><button type="button" id="register-result-button" class="scan-export" hidden>Register proof →</button></section>
+      <section id="inspect-result" class="inspect-result" hidden></section>
+      <section id="scan-result" class="inspect-result" hidden></section>
+      <section id="extract-result" class="inspect-result" hidden></section><section id="chain-result" class="inspect-result" hidden></section>
+    </section>
+  </main>
+  <footer><div class="footer-inner"><span>Files are processed locally by your DocuMark server and returned as downloads.</span><span>Built for learning · © 2026 DocuMark</span></div></footer>
+</body>
+</html>

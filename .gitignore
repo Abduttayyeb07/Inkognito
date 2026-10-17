@@ -1,0 +1,35 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / Vite
+node_modules/
+frontend/dist/
+npm-debug.log*
+
+# Hardhat / Solidity build output (frontend/registry-artifact.json is kept: the app imports it)
+artifacts/
+cache/
+
+# Secrets and local settings (.env.example stays tracked)
+.env
+.env.*
+!.env.example
+
+# Local working files
+storage/*
+!storage/.gitkeep
+graphify-out/
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
