@@ -6,14 +6,14 @@ Learning project for computer-vision document watermarking and optional Ethereum
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-phase1.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m samples.generate
 .\.venv\Scripts\python.exe -m pytest -q -s
 ```
 
 Use Python 3.12 or newer. The generated samples are synthetic and contain no personal data. The tests print PSNR, SSIM, and pHash Hamming distance; they verify that the PDF opens and that pHash remains close after JPEG quality 70.
 
-`requirements-web.txt` adds the no-account local frontend and API. `requirements.txt` pins the planned full stack; `requirements-stretch.txt` lists optional learned watermark and OCR packages. These later-phase packages have not yet been installed or integration tested.
+`requirements.txt` pins everything the API and tests need.
 
 ## Run the web app
 

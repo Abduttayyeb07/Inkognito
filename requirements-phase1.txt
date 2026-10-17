@@ -1,8 +1,0 @@
-# Versions checked against PyPI on 2026-10-15; Phase 0/1 only.
-numpy==2.5.4
-opencv-python==4.14.0.94
-PyMuPDF==1.28.2
-Pillow==12.3.0
-ImageHash==4.3.2
-scipy==1.18.1
-pytest==9.1.1

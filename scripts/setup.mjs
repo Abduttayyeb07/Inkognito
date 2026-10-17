@@ -14,5 +14,5 @@ if (!existsSync(python)) {
   run(process.platform === 'win32' ? 'python.exe' : 'python3', ['-m', 'venv', '.venv']);
 }
 console.log('Installing Python API dependencies...');
-run(python, ['-m', 'pip', 'install', '-r', 'requirements-web.txt']);
+run(python, ['-m', 'pip', 'install', '-r', 'requirements.txt']);
 console.log('Setup complete. Run npm run dev.');

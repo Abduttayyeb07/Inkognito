@@ -1,10 +1,15 @@
-# Full planned Python stack. The local frontend uses requirements-web.txt.
--r requirements-web.txt
-PyWavelets==1.10.0
-reedsolo==1.7.0
-scikit-image==0.26.0
-invisible-watermark==0.2.0
-SQLModel==0.0.48
-pydantic-settings==2.16.0
-cosmpy==0.12.2
-streamlit==1.66.0
+# Python dependencies for the DocuMark API and tests.
+# Computer vision, PDF and hashing
+numpy==2.5.4
+opencv-python==4.14.0.94
+PyMuPDF==1.28.2
+Pillow==12.3.0
+ImageHash==4.3.2
+scipy==1.18.1
+# Web API
+fastapi==0.143.2
+uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+# Tests
+pytest==9.1.1
+httpx==0.28.1
