@@ -1,70 +1,236 @@
 # DocuMark
 
-Learning project for computer-vision document watermarking and optional Ethereum Sepolia hash registration. The app provides sample documents, PDF/image handling, an adjustable circular visible seal, exact SHA-256 hashing, and per-page pHash.
+**Hide a traceable ID in your documents, prove when you registered them on Ethereum, and find the owner of any copy, even a phone photo of a screen.**
 
-## Run on Windows
+DocuMark is a learning project that combines computer vision and a smart contract. It watermarks PDFs and images with an invisible ID, scans paper pages from a phone camera, and records tamper-evident fingerprints on the Ethereum Sepolia test network. Everything runs locally with no account, and files never leave your server.
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m samples.generate
-.\.venv\Scripts\python.exe -m pytest -q -s
+> **Testnet only.** The contract is a learning project and is not audited. Do not use real funds or treat a registration as legal proof of authorship (see [Limitations](#limitations)).
+
+## Contents
+
+- [What it does](#what-it-does)
+- [How it works](#how-it-works)
+- [Quick start](#quick-start)
+- [Using the app](#using-the-app)
+- [Project layout](#project-layout)
+- [Technical details](#technical-details)
+- [API](#api)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Privacy and security](#privacy-and-security)
+- [Limitations](#limitations)
+- [Acknowledgements](#acknowledgements)
+
+## What it does
+
+| Tool | What you get |
+| --- | --- |
+| **Add watermark** | Embeds a random 64-bit hidden ID in the page brightness. Optionally adds a visible circular seal with your name. |
+| **Scan document** | Turns up to 20 phone photos into a clean PDF: automatic edge detection, manual corner adjustment, rotation, five filters, page reordering. |
+| **Inspect file** | Shows the SHA-256 and per-page perceptual hash (pHash) of a PDF or image. |
+| **Sepolia proof** | Registers a file's fingerprint on Ethereum Sepolia (commit-reveal), checks existing records, finds visually similar documents, and signs a shareable proof certificate. |
+| **Find owner** | Reads the hidden ID from any copy (resaved PDF, screenshot, phone photo) and looks up the registered owner on-chain. |
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Your document] -->|1. embed hidden ID| B[Watermarked file]
+    B -->|2. SHA-256 + pHashes + ID| C[(Sepolia registry)]
+    B -->|shared or leaked| D[A copy: resaved, screenshot, phone photo]
+    D -->|3. scanner straightens, CV reads the ID| E[Hidden ID]
+    E -->|4. look up the ID| C
+    C --> F[Registered wallet + time]
 ```
 
-Use Python 3.12 or newer. The generated samples are synthetic and contain no personal data. The tests print PSNR, SSIM, and pHash Hamming distance; they verify that the PDF opens and that pHash remains close after JPEG quality 70.
+1. **Embed.** A random 64-bit ID is hidden in the page pixels. You cannot see it, but computer vision can read it back.
+2. **Register.** You register the exact downloaded file. The contract stores its SHA-256, a pHash root, the page count, the hidden ID, your wallet and the time. Registration is **commit-reveal**: a hidden commitment first, the reveal second, so nobody watching the network can copy your hash and register it before you.
+3. **Recover.** Someone has a copy. A resaved or photographed copy has a different SHA-256, so an exact lookup misses it. DocuMark straightens the photo, extracts the hidden ID and finds the original record.
+4. **Verify.** The result shows which wallet registered the original and when. You can also download a signed proof certificate that anyone can verify without a wallet.
 
-`requirements.txt` pins everything the API and tests need.
+The ID is stored on-chain, not the watermark itself. Embedding a file's own hash is impossible because embedding changes the file and therefore its hash, so a random ID links the copy to the record.
 
-## Run the web app
+## Quick start
+
+### Docker
+
+```bash
+docker build -t documark --build-arg VITE_SEPOLIA_REGISTRY_ADDRESS=<your registry address> .
+docker run --rm -p 8000:8000 documark
+```
+
+Open <http://localhost:8000>. The registry address is optional and can also be pasted in the app. Wallets such as MetaMask need `localhost` or HTTPS, so a deployed site must use HTTPS.
+
+### Local development (Windows)
+
+Requirements: Python 3.12+, Node.js 22+, and a browser wallet such as MetaMask for the blockchain features.
 
 ```powershell
 npm.cmd install
-npm.cmd run setup
-npm.cmd run dev
+npm.cmd run setup      # creates .venv and installs requirements.txt
+npm.cmd run dev        # starts the API (port 8765) and the Vite frontend (port 5173)
 ```
 
-Open `http://127.0.0.1:5173` on the computer. The Node/Vite frontend proxies `/api` to the Python CV backend, and `npm run dev` starts both. Frontend and backend code changes reload automatically. Restart `npm run dev` once after changing the dev script itself. On Windows PowerShell, use `npm.cmd` if the execution policy blocks `npm.ps1`; in Command Prompt, plain `npm` works. `npm run build` creates `frontend/dist`, which the Python server can also serve directly.
+Open <http://127.0.0.1:5173>. Use `npm` instead of `npm.cmd` in Command Prompt or on macOS and Linux. Frontend and backend changes reload automatically.
 
-To scan with a phone camera, connect the phone and computer to the same Wi-Fi, start `npm.cmd run dev`, and open the **Network** URL printed by Vite on the phone (for example, `http://192.168.1.20:5173`). Open **Scan document** and tap **Take page photo with phone camera**. Capture one page at a time, then tap **Review scans** to adjust corners and filters and download a PDF or JPG. The camera button uses the browser's rear-camera file capture; camera behavior depends on the phone and browser. If the Network URL does not open, allow Node/Vite through the computer's firewall for the private network.
+**Phone camera.** Put the phone and computer on the same Wi-Fi, start `npm.cmd run dev`, and open the **Network** URL that Vite prints (for example `http://192.168.1.20:5173`). If it does not open, allow Node.js through the firewall on the private network. Scanning works over plain HTTP; wallets do not, so use the computer for blockchain steps.
 
-The app has Add watermark, Scan document, Inspect file, Sepolia proof, and Find owner. The scan workspace accepts up to 20 page photos (or one PDF for inspection). On a phone, use **Take page photo with phone camera** repeatedly to collect pages. After auto edge detection, drag the four crop corners, rotate, choose from Original, Auto enhance, Bright, Grayscale, and Black & white, reorder pages, and save a multi-page PDF. One-page scans can also be downloaded as JPG. **Add watermark to scanned PDF** carries the processed pages into the seal tool. The scan report also checks sharpness and looks for a centered circular seal pattern. Enter your name or organization, choose ink color, opacity, and seal size from 15% to 70%, and review the page preview before watermarking. Scanning and watermarking need no account or wallet. Files are processed in memory by the local Python server and returned as downloads. On-chain registration is optional and initiated from a browser wallet; file contents are never registered. Each upload is limited to 20 MB, a scan batch to 60 MB, and PDFs to 20 pages.
+## Using the app
 
-The interface follows the clear tool-card and upload-workspace pattern of [iLovePDF](https://www.ilovepdf.com/), using DocuMark branding and copy. The linked clone-app-pat-pro skill calls for Claude's Chrome extension and computed-style assertions; those tools are unavailable in this environment, so this is a functional design adaptation rather than a verified pixel-for-pixel clone.
+### Watermark a document
 
-`backend/app/cv/` functions receive pixel arrays and return pixel arrays or hashes. `pdf_to_images` renders a PDF at 200 DPI by default; `images_to_pdf` makes a PDF with page dimensions derived from DPI. Pixel arrays use RGB `uint8` throughout.
+1. Open **Add watermark** and choose a PDF or image.
+2. Leave **Hidden ID watermark** on. Optionally tick **Also add a visible seal** and set the name, ink, opacity and size.
+3. Download the file. The page shows its hidden ID.
 
-## How Phase 1 works
+### Register it on Sepolia
 
-The visible watermark is a centered circular seal with double rings, the chosen name on its upper arc, and initials in the middle. On images, its transparent pixels are alpha blended with the page: for pixel `P`, ink `W`, and local opacity `a`, the output is `(1-a)P + aW`. The default opacity is 0.18 and default size is 35% of the shorter page dimension. On PDFs, the seal is inserted as a transparent image over each existing page, preserving selectable text and vector content.
+1. In MetaMask, switch to **Sepolia** and get free test ETH from a faucet.
+2. Click **Register proof →**, or open **Sepolia proof** and upload the downloaded file.
+3. First time only: click **Deploy test registry** and confirm. The address is saved in the browser (set `VITE_SEPOLIA_REGISTRY_ADDRESS` to share it).
+4. Click **Register exact hash** and confirm **two** wallet transactions (commit, then reveal). A progress tracker shows each step with Etherscan links.
+5. Optional: enter a creator name and click **Sign & download proof certificate**.
 
-pHash reduces an image to its low-frequency DCT structure, then converts it to a 64-bit pattern. JPEG compression often changes pixels without changing that broad structure. Compare page hashes by Hamming distance; SHA-256 remains the check for byte-identical files. `phash_root` hashes the ordered concatenation of page pHashes for later on-chain storage.
+Register the exact bytes you will share. Re-saving a file changes its SHA-256.
 
-The scanner uses OpenCV edges and quadrilateral contours to find a photographed page, then applies a perspective transform to straighten it. Manual corner positions use the same transform. Enhance and Bright use local contrast adjustment; Grayscale removes color; Black & white uses adaptive thresholding. It measures edge sharpness with the variance of a Laplacian filter. To find the visible seal, it compares pixel brightness at the two expected circular rings against neighboring radii. This is a heuristic for the centered DocuMark-style seal, not a general watermark detector or proof that a document is authentic; another centered circular graphic can match, and a faint or transformed seal can be missed.
+### Trace a copy
 
-The scan workflow follows the capabilities described in [CamScanner's official developer page](https://dev.camscanner.com/?language=en-us): automatic edge crop, manual adjustment, image enhancement, and PDF/JPG output. It is an independent local implementation and does not include CamScanner's proprietary AI, OCR, cloud sync, or exact interface.
+1. Open **Find owner** and upload the copy (PDF, image, screenshot or phone photo).
+2. For a phone photo, show the whole page on a darker background so the scanner can find its edges.
+3. DocuMark reads the hidden ID and shows the registered wallet, the registration time and a transaction link. No wallet is needed.
 
-## Hidden watermark
+### Scan paper pages
 
-**Add watermark** hides a random 64-bit ID in the page brightness by default (`backend/app/cv/invisible.py`); the visible seal is optional. Each page is resized to a fixed 256-pixel grid, and each of 80 coded bits (the ID plus a CRC-16) is repeated across 8x8 blocks chosen by a fixed shuffle. A bit is the sign of the difference between DCT coefficients (1,3) and (3,1). When reading, votes are summed per bit, and the CRC can repair up to two of the weakest bits; a result is reported only if the CRC matches and the signal is clearly above the level seen on unmarked pages. Only the brightness change is computed on the grid and scaled back onto the page, so resolution and color are kept. The change is about 3 grey levels (at most about 7), plus a 3-level brightness headroom so white paper does not clip the mark. On very plain white pages a faint texture can be visible up close.
+1. Open **Scan document** and tap **Take page photo with phone camera** (or add files).
+2. Review each page: drag the four crop corners, rotate, choose a filter (Original, Auto enhance, Bright, Grayscale, Black & white) and reorder.
+3. Save a multi-page PDF, or a JPG for a single page. **Add watermark to scanned PDF** carries the pages into the watermark tool.
 
-The download shows the hidden ID. Register that exact file on Sepolia: the ID goes into the commitment and the record, and the contract refuses to link one ID to two files. **Find owner** reads the ID from a copy (PDF, image, screenshot or phone photo; photos are straightened by the scanner first) and looks up the registered owner on-chain, even though the copy's SHA-256 differs.
+## Project layout
 
-Measured on the generated samples: the ID is recovered from JPEG quality 50, half-size copies, 90-degree rotation, and a simulated phone photo (perspective, blur, noise, JPEG 85) after scanner straightening; unmarked pages are not reported (0 of 150 random IDs failed on simulated phone photos; 0 false detections in 1,200 unmarked readings). A raw photo without straightening, heavy cropping, or strong filters can remove the mark. A PDF with a hidden ID is rebuilt from 150-dpi page images, so its text is no longer selectable. The shuffle key is public; the mark identifies copies and is not meant to resist a deliberate removal attempt.
+```
+backend/
+  app/
+    main.py            FastAPI app and all endpoints
+    cv/
+      invisible.py     hidden 64-bit watermark (DCT) and extraction
+      visible.py       circular seal rendering and blending
+      scanner.py       edge detection, perspective correction, filters, seal detector
+      hashing.py       SHA-256, pHash, Hamming distance, pHash root
+      io_pdf.py        PDF <-> pixel arrays
+  tests/               pytest suites
+contracts/
+  DocumentRegistry.sol commit-reveal registry
+  test/                local-EVM contract test
+frontend/              Vite app: app.js (tools), chain.js (wallet and Sepolia)
+samples/               generator for synthetic test documents
+scripts/               dev server, setup, contract compiler
+Dockerfile             one-container build (API + built frontend)
+```
 
-## Ethereum Sepolia proof
+## Technical details
 
-The optional `DocumentRegistry` Solidity contract stores an exact file SHA-256 hash, pHash root, page count, submitting wallet address, and the commit timestamp. Registration is commit-reveal: the first transaction publishes only a salted commitment, so nobody watching the mempool can copy your hash and register it first; the second transaction reveals the hash and salt. The reveal also emits the per-page pHashes (the contract checks they match the pHash root). It stores no file or name. The frontend signs deployment and registration through an injected browser wallet; the local server never handles a private key. Sepolia is Ethereum's contract test network, with chain ID `11155111`.
+### Hidden watermark
 
-1. Run `npm.cmd run contract:test` to compile and test the contract on a local Hardhat EVM.
-2. In your wallet, select Sepolia and obtain test ETH from a Sepolia faucet. Deployment and registration spend **test ETH** for gas.
-3. Open **Sepolia proof** in the app. Click **Deploy test registry** and confirm in your wallet, or enter an existing registry address. The address is saved in this browser. To share a registry with other browsers, set `VITE_SEPOLIA_REGISTRY_ADDRESS` in `.env` or paste the same address.
-4. Watermark and download a file, then use **Register proof** to analyze the exact downloaded bytes. Click **Register exact hash** and confirm **two** wallet transactions (commit, then reveal). The page shows both transaction hashes with Etherscan links. The salt is kept in this browser until the reveal succeeds; if the page is closed in between, registering again resumes at the reveal.
-5. To check it later, upload the exact same bytes to **Sepolia proof**, use the same contract address, and click **Check Sepolia registry**. Read-only lookup uses the wallet's Sepolia provider when available, or the public RPC configured by `VITE_SEPOLIA_RPC_URL`.
+The core is in [`backend/app/cv/invisible.py`](backend/app/cv/invisible.py).
 
-After registering, the registering wallet can click **Sign & download proof certificate**: a JSON file with the file hash, registry, transaction, block time and a free wallet signature over a fixed claim text, plus an optional creator name that stays off-chain. Anyone can load it with **Verify a proof certificate** (no wallet needed) to check the signature and the on-chain record; analyze the file first to also confirm it has the same SHA-256. The certificate proves the wallet registered the hash and signed the claim; it does not prove who created the document.
+- **Coding.** The 64-bit ID plus a CRC-16 gives 80 coded bits. Each page is resized to a fixed 256x256 grid so the mark survives rescaling.
+- **Embedding.** Each bit is repeated across 8x8 blocks chosen by a fixed shuffle. A bit is the sign of the difference between DCT coefficients (1,3) and (3,1) of the brightness channel. Only the brightness *change* is computed on the grid and scaled back onto the page, so resolution and color are kept.
+- **Strength.** About 3 grey levels at most about 7, plus 3 levels of headroom so white paper does not clip the mark. On very plain white pages a faint texture can be visible up close.
+- **Extraction.** Votes are summed per bit across all blocks and four rotations. The CRC can repair up to two weak bits. A result is reported only if the CRC matches and the signal is clearly above what unmarked pages produce.
+- **Phone photos.** The scanner finds the page quadrilateral with OpenCV, applies a perspective transform, and extraction runs on the straightened page.
 
-No Sepolia address is bundled because deployment needs a wallet signature and test ETH. The local contract test confirms behavior, but it is not a Sepolia deployment. Resaving a document changes SHA-256, so the exact lookup will miss modified copies. **Check Sepolia registry** also scans the registry's event history for visually similar documents (at least 60% of pages within 10 of 64 pHash bits), so a resaved or re-exported copy is flagged with the earlier registrant and transaction. Registering a file that is similar to another wallet's record asks for confirmation first. Similarity is evidence only, and the earlier record is the stronger one. Commit-reveal does not stop someone who already holds your exact file from registering it first, so register before you share. After redeploying the contract, use the new registry address; records on an older registry stay there.
+Measured on the generated samples:
 
-## Boundaries
+| Test | Result |
+| --- | --- |
+| JPEG quality 50, half-size copy, 90-degree rotation | ID recovered |
+| Simulated phone photo (perspective, blur, noise, JPEG 85) after straightening | 150 of 150 random IDs recovered |
+| Unmarked pages and random noise | 0 false detections in 1,200 readings |
 
-A visible watermark is a deterrent and can be cropped or removed. A classical DWT-DCT watermark in a later phase will be a learning tool, not protection against a determined attacker. A chain registration proves only that a wallet submitted a hash at a time; it cannot prove authorship or authenticity. Use testnet only. The upload API enforces file size, type, image pixel count, and PDF page limits.
+These are simulations, not real camera tests, so real phone shots may do worse.
+
+### Fingerprints and similarity
+
+- **SHA-256** identifies an exact file. Any change, even re-saving, produces a different hash.
+- **pHash** reduces a page to its low-frequency DCT structure as a 64-bit pattern, so it stays close after compression. Pages are compared by Hamming distance.
+- **pHash root** is the SHA-256 of the ordered concatenation of page pHashes. The contract recomputes it from the submitted per-page hashes.
+- **Similarity search.** **Check Sepolia registry** scans the registry's events and flags documents where at least 60% of pages are within 10 of 64 bits of yours, with the earlier registrant and transaction. Registering something similar to another wallet's record asks for confirmation first.
+
+### Visible seal
+
+A centered circular seal with double rings, your name on the upper arc and initials in the middle. On images it is alpha blended as `(1-a)P + aW` (default opacity 0.18, size 35% of the shorter side). On PDFs it is inserted as a transparent image over each page, so selectable text is preserved.
+
+### Smart contract
+
+[`DocumentRegistry.sol`](contracts/DocumentRegistry.sol) (Solidity 0.8.37) on Ethereum Sepolia (chain ID `11155111`):
+
+- `commit(bytes32 commitment)`: stores `keccak256(fileHash, watermarkId, sender, salt)`. Nothing readable goes on-chain.
+- `register(fileHash, salt, phashRoot, pageCount, pageHashes, watermarkId)`: in a later block, reveals the hash. It checks that the commitment belongs to the sender, that the page hashes match the root, that the file is not already registered, and that the watermark ID is not linked to another file. The record keeps the **commit time**.
+- Stored per record: registrar wallet, commit timestamp, page count, pHash root, and a `watermarkId -> fileHash` mapping. The per-page pHashes are emitted in the event for off-chain similarity search.
+- No file, name or personal data is stored. Records are permanent and cannot be edited.
+
+### Proof certificate
+
+A JSON file with the file hash, hidden ID, registry, transaction, block time and a free wallet signature over a fixed claim text, plus an optional creator name that stays off-chain. **Verify a proof certificate** checks that the signed text matches, the signature came from the registrar, and the on-chain record matches. It does not need a wallet.
+
+## API
+
+All endpoints are under `/api` and process files in memory.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | Liveness check |
+| `GET` | `/api/seal-preview` | Preview image of the visible seal |
+| `POST` | `/api/watermark` | Add a hidden ID and/or visible seal (`hidden`, `visible`, `text`, `opacity`, `color`, `size`). The hidden ID is returned in the `X-Watermark-Id` header. |
+| `POST` | `/api/extract` | Read a hidden ID from a PDF, image or photo |
+| `POST` | `/api/inspect` | SHA-256, pHashes, pHash root and any hidden ID |
+| `POST` | `/api/scan` | Edge detection, sharpness and seal check for a page |
+| `POST` | `/api/scan-render` | Render one photo with crop, filter and rotation |
+| `POST` | `/api/scan-batch` | Combine up to 20 photos into one PDF |
+| `POST` | `/api/scan-export` | Straightened PNG of a photo |
+
+Limits: 20 MB per file, 60 MB per scan batch, 20 PDF pages, 25 megapixels per image.
+
+## Configuration
+
+Copy `.env.example` to `.env` only if you need these. `VITE_` values are public and compiled into the frontend, so never put keys or mnemonics here.
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `VITE_SEPOLIA_REGISTRY_ADDRESS` | Registry address shared by all browsers | none (paste in the app or deploy) |
+| `VITE_SEPOLIA_RPC_URL` | Read-only Sepolia RPC for lookups | `https://ethereum-sepolia-rpc.publicnode.com` |
+
+## Testing
+
+```powershell
+.\.venv\Scripts\python.exe -m samples.generate    # create the synthetic sample documents
+.\.venv\Scripts\python.exe -m pytest -q -s        # backend: CV, scanner, watermark, API
+npm.cmd run contract:test                         # contract on a local Hardhat EVM
+```
+
+The backend suite covers PSNR/SSIM and pHash stability, the scanner, the hidden watermark (faintness, JPEG, resize, rotation, simulated phone photos, false positives) and every API flow. The contract test covers commit-reveal, front-running protection, duplicate files and IDs, and the pHash-root check. Samples are synthetic and contain no personal data.
+
+## Privacy and security
+
+- Files are processed in memory by your own server and returned as downloads. Nothing is uploaded elsewhere.
+- Only fingerprints go on-chain, never the file, names or personal details.
+- The server never touches a private key. Deployment and registration are signed in the browser wallet.
+- The upload API enforces file type, size, image pixel count and PDF page limits, and rejects disguised files.
+- The Docker image runs as a non-root user.
+
+## Limitations
+
+- **A registration is not proof of authorship.** It proves only that a wallet submitted a fingerprint at a certain time. Someone who already holds your exact file can register it first (commit-reveal stops mempool copying, not that), so register before you share. Keep your originals and drafts as evidence.
+- **The hidden mark is for tracing copies, not for resisting removal.** Heavy cropping, strong filters, very small images, or a raw photo without visible page edges can destroy it. The shuffle key is public.
+- **PDFs with a hidden ID become image-based.** They are rebuilt from 150-dpi page renders, so text is no longer selectable. The visible seal alone keeps selectable text.
+- **Similarity is evidence, not proof.** The earlier record is the stronger one.
+- **The seal detector is a heuristic** for the centered DocuMark-style seal, not a general watermark detector.
+- **Testnet only, not audited.** Redeploying the contract creates a new registry; records on an older registry stay there.
+
+## Acknowledgements
+
+The interface adapts the tool-card and upload-workspace pattern of [iLovePDF](https://www.ilovepdf.com/), with DocuMark branding and copy. The scan workflow follows the capabilities described on [CamScanner's developer page](https://dev.camscanner.com/?language=en-us) (automatic crop, manual adjustment, enhancement, PDF/JPG output) as an independent local implementation. It includes none of CamScanner's proprietary AI, OCR or cloud features.
+
+## License
+
+No license has been chosen yet. Until one is added, all rights are reserved by the author.
